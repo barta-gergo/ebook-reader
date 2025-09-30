@@ -1,0 +1,168 @@
+<div class="pdf-viewer-container" *ngIf="book">
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="toolbar">
+    <div class="toolbar-section">
+      <button (click)="previousPage()" [disabled]="currentPage <= 1">
+        ← Previous
+      </button>
+      <button (click)="nextPage()" [disabled]="currentPage >= totalPages">
+        Next →
+      </button>
+    </div>
+
+    <!-- Search is handled by PDF.js built-in functionality (Ctrl+F) -->
+    
+    <div class="toolbar-section">
+      <span>Page: </span>
+      <input 
+        type="number" 
+        [value]="currentPage" 
+        (change)="goToPage(+$any($event.target).value)"
+        min="1" 
+        [max]="totalPages"
+        class="page-input">
+      <span> / {{ totalPages }}</span>
+    </div>
+
+    <div class="toolbar-section">
+      <button (click)="zoomOut()">Zoom Out</button>
+      <span class="zoom-level">{{ (zoom * 100).toFixed(0) }}%</span>
+      <button (click)="zoomIn()">Zoom In</button>
+    </div>
+
+    <div class="toolbar-section">
+      <button (click)="toggleFitToPage()" [class.active]="fitToPage">
+        {{ fitToPage ? '📖' : '📄' }} Igazítás az oldal mérethez
+      </button>
+      <button (click)="rotateCounterClockwise()">↶</button>
+      <button (click)="rotateClockwise()">↷</button>
+      <button
+        (click)="toggleBookmark()"
+        [class.active]="isCurrentPageBookmarked()"
+        title="{{ isCurrentPageBookmarked() ? 'Remove bookmark' : 'Add bookmark' }}">
+        {{ isCurrentPageBookmarked() ? '⭐' : '☆' }} Bookmark
+      </button>
+      <div class="search-controls">
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          placeholder="Search in PDF..." 
+          (keydown.enter)="searchInPdf(searchQuery)"
+          class="search-input">
+        <button (click)="searchInPdf(searchQuery)" [disabled]="!searchQuery">🔍</button>
+        <span class="search-hint" title="Use Ctrl+F for native search">or Ctrl+F</span>
+      </div>
+      <button (click)="toggleDarkMode()" class="theme-toggle">
+        {{ (themeService.isDarkMode$ | async) ? '☀️' : '🌙' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-background">
+      <div *ngFor="let page of getPageSegments(); trackBy: trackByPageNumber" 
+           class="page-segment" 
+           [class.read]="isPageRead(page)"
+           [class.current]="page === currentPage"
+           [style.width.%]="getPageWidth()">
+      </div>
+    </div>
+    <span class="progress-text">{{ getProgressPercentage().toFixed(1) }}% ({{ readPages.size }}/{{ totalPages }} read)</span>
+  </div>
+
+  <div class="pdf-container" (scroll)="onScroll($event)">
+    <div *ngIf="isLoading" class="loading-indicator">
+      Loading PDF...
+    </div>
+    
+    <pdf-viewer
+      #pdfViewer
+      [src]="getPdfSource()"
+      [zoom]="fitToPage ? 1.0 : zoom"
+      [rotation]="rotation"
+      [show-all]="true"
+      [render-text]="true"
+      [external-link-target]="'blank'"
+      [autoresize]="fitToPage"
+      [original-size]="!fitToPage"
+      [fit-to-page]="fitToPage"
+      (after-load-complete)="onLoadComplete($event)"
+      (page-rendered)="onPageRendered($event)"
+      (pages-initialized)="onPagesInitialized($event)"
+      (error)="onError($event)"
+      class="pdf-viewer">
+    </pdf-viewer>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!book" class="no-book-message">
+  <h3>No book selected</h3>
+  <p>Please select a book from the library to start reading.</p>
+</div>
+
+<!-- Bookmark Dialog -->
+<div *ngIf="showBookmarkDialog" class="bookmark-dialog-overlay" (click)="closeBookmarkDialog()">
+  <div class="bookmark-dialog" (click)="$event.stopPropagation()">
+    <h3>{{ editingBookmark ? 'Edit Bookmark' : 'Add Bookmark' }}</h3>
+    <div class="bookmark-form">
+      <div class="form-group">
+        <label for="bookmark-title">Title:</label>
+        <input
+          id="bookmark-title"
+          type="text"
+          [(ngModel)]="bookmarkTitle"
+          placeholder="Enter bookmark title"
+          class="bookmark-input">
+      </div>
+      <div class="form-group">
+        <div class="note-header">
+          <label for="bookmark-note">Note (optional):</label>
+          <button
+            (click)="generateNoteWithAI()"
+            [disabled]="generatingNote"
+            class="btn-generate-ai"
+            type="button"
+            title="Generate note using AI">
+            {{ generatingNote ? '⏳ Generating...' : '✨ Generate with AI' }}
+          </button>
+        </div>
+        <textarea
+          id="bookmark-note"
+          [(ngModel)]="bookmarkNote"
+          placeholder="Add a note..."
+          class="bookmark-textarea"
+          rows="6"></textarea>
+      </div>
+      <div class="dialog-actions">
+        <button (click)="closeBookmarkDialog()" class="btn-cancel">Cancel</button>
+        <button (click)="saveBookmark()" class="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bookmarks List Panel -->
+<div *ngIf="book && bookmarks.length > 0" class="bookmarks-panel">
+  <h4>Bookmarks ({{ bookmarks.length }})</h4>
+  <div class="bookmarks-list">
+    <div
+      *ngFor="let bookmark of bookmarks"
+      class="bookmark-item"
+      [class.current]="bookmark.pageNumber === currentPage">
+      <div class="bookmark-content" (click)="goToBookmark(bookmark)">
+        <div class="bookmark-title">
+          <span class="bookmark-icon">⭐</span>
+          {{ bookmark.title || 'Page ' + bookmark.pageNumber }}
+        </div>
+        <div class="bookmark-page">Page {{ bookmark.pageNumber }}</div>
+        <div *ngIf="bookmark.note" class="bookmark-note">{{ bookmark.note }}</div>
+      </div>
+      <div class="bookmark-actions">
+        <button (click)="openBookmarkDialog(bookmark)" class="btn-edit" title="Edit">✏️</button>
+        <button (click)="deleteBookmarkById(bookmark.id)" class="btn-delete" title="Delete">🗑️</button>
+      </div>
+    </div>
+  </div>
+</div>

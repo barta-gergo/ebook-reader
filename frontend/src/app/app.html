@@ -1,0 +1,43 @@
+<!-- Router outlet for auth callback -->
+<div *ngIf="isAuthCallback">
+  <router-outlet></router-outlet>
+</div>
+
+<!-- Main app content when not on auth callback -->
+<div *ngIf="!isAuthCallback">
+  <!-- Show login component if not authenticated -->
+  <div *ngIf="!isAuthenticated" class="auth-container">
+    <app-login></app-login>
+  </div>
+
+  <!-- Show main app if authenticated -->
+  <div class="app-container" *ngIf="isAuthenticated">
+    <header class="app-header">
+      <h1>EBook Reader</h1>
+      <div class="header-center">
+        <app-search></app-search>
+      </div>
+      <div class="header-controls">
+        <button (click)="openFile()" class="btn-primary">Open PDF</button>
+        <button (click)="toggleSidePanel()" class="btn-secondary">
+          {{ showSidePanel ? 'Hide' : 'Show' }} Panel
+        </button>
+        <app-user-profile></app-user-profile>
+      </div>
+    </header>
+
+    <div class="app-content">
+      <aside *ngIf="showSidePanel" class="sidebar" [style.width.px]="sidebarWidth">
+        <app-side-panel></app-side-panel>
+        <div class="resize-handle" 
+             (mousedown)="startResize($event)"
+             title="Drag to resize">
+        </div>
+      </aside>
+      
+      <main class="main-content">
+        <app-pdf-viewer [book]="currentBook"></app-pdf-viewer>
+      </main>
+    </div>
+  </div>
+</div>

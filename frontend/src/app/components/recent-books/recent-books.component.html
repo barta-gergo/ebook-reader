@@ -1,0 +1,42 @@
+<div class="recent-section">
+  <div class="section-header">
+    <h3>📚 Recently Opened</h3>
+    <button class="collapse-btn" (click)="toggleCollapse()" [title]="isCollapsed ? 'Expand' : 'Collapse'">
+      {{ isCollapsed ? '▼' : '▲' }}
+    </button>
+  </div>
+
+  <div class="recent-books-container" *ngIf="!isCollapsed">
+    <div *ngFor="let book of recentBooks$ | async"
+         class="recent-book-item"
+         [class.active]="isCurrentBook(book)"
+         (click)="continueReading(book, $event)">
+
+      <div class="recent-book-info">
+        <h5 class="book-title">{{ book.title }}</h5>
+        <span class="book-author">{{ book.author }}</span>
+
+        <!-- Progress indicator -->
+        <div class="progress-bar" *ngIf="getProgress(book) > 0">
+          <div class="progress-fill" [style.width.%]="getProgress(book)"></div>
+        </div>
+        <span class="progress-text">{{ getProgress(book) }}% complete</span>
+
+        <!-- Time indicator -->
+        <span class="last-opened">
+          📅 {{ getTimeAgo(book.lastOpened) }}
+        </span>
+      </div>
+
+      <!-- Quick action button -->
+      <button class="btn-continue" (click)="continueReading(book, $event)">
+        ▶️ Continue
+      </button>
+    </div>
+
+    <div *ngIf="(recentBooks$ | async)?.length === 0" class="empty-recent">
+      <p>No recent books yet.</p>
+      <p>Open a book to get started!</p>
+    </div>
+  </div>
+</div>

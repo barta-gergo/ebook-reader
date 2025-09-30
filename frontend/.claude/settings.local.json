@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(D:\\software_dev\\random\\ebook-reader\\backend\\src\\domain\\aggregates/**)",
+      "Read(D:\\software_dev\\random\\ebook-reader\\backend\\src\\presentation\\controllers/**)",
+      "Bash(npm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,435 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
+import { MeiliSearch } from 'meilisearch';
+import { MeilisearchService } from './meilisearch.service';
+import { Book } from '../../domain/entities/book.entity';
+import { BookId } from '../../domain/value-objects/book-id.value-object';
+
+// Mock the meilisearch module
+jest.mock('meilisearch');
+
+// Mock the config
+jest.mock('../config/meilisearch.config', () => ({
+  meilisearchConfig: {
+    enabled: true,
+    host: 'http://localhost:7700',
+    apiKey: 'test-api-key',
+    indexName: 'test-books'
+  }
+}));
+
+// Mock dotenv to prevent it from running in tests
+jest.mock('dotenv', () => ({
+  config: jest.fn()
+}));
+
+describe('MeilisearchService', () => {
+  let service: MeilisearchService;
+  let mockClient: jest.Mocked<MeiliSearch>;
+  let mockIndex: any;
+
+  const mockBook: Book = {
+    id: BookId.fromString('test-book-1'),
+    title: 'Test Book',
+    author: 'Test Author',
+    filePath: '/test/book.pdf',
+    fileSize: 1024000,
+    mimeType: 'application/pdf',
+    totalPages: 100,
+    subject: 'Testing',
+    keywords: 'test, book',
+    creator: 'Test Creator',
+    producer: 'Test Producer',
+    creationDate: new Date('2023-01-01'),
+    modificationDate: new Date('2023-01-02'),
+    version: '1.0',
+    textLength: 50000,
+    searchableText: 'This is searchable text content',
+    addedAt: new Date('2023-01-01T00:00:00.000Z'),
+    lastOpened: new Date('2023-01-02T00:00:00.000Z'),
+    updateLastOpened: jest.fn(),
+    isPDF: jest.fn().mockReturnValue(true),
+  } as any;
+
+  beforeEach(async () => {
+    // Mock index methods
+    mockIndex = {
+      search: jest.fn(),
+      addDocuments: jest.fn(),
+      deleteDocument: jest.fn(),
+      deleteAllDocuments: jest.fn(),
+      getStats: jest.fn(),
+      updateSearchableAttributes: jest.fn(),
+      updateSortableAttributes: jest.fn(),
+      updateFilterableAttributes: jest.fn(),
+      updateRankingRules: jest.fn(),
+      updateSynonyms: jest.fn(),
+      updateTypoTolerance: jest.fn(),
+    };
+
+    // Mock MeiliSearch client
+    mockClient = {
+      health: jest.fn(),
+      index: jest.fn().mockReturnValue(mockIndex),
+      createIndex: jest.fn(),
+    } as any;
+
+    // Mock the MeiliSearch constructor
+    (MeiliSearch as jest.MockedClass<typeof MeiliSearch>).mockImplementation(() => mockClient);
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [MeilisearchService],
+    }).compile();
+
+    service = module.get<MeilisearchService>(MeilisearchService);
+
+    // Mock logger methods
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation();
+
+    // Initialize the service (this sets up the index)
+    await service.onModuleInit();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('onModuleInit', () => {
+    it('should initialize index configuration when enabled', async () => {
+      // Arrange
+      mockClient.createIndex.mockResolvedValue({} as any);
+      mockIndex.updateSearchableAttributes.mockResolvedValue({} as any);
+      mockIndex.updateSortableAttributes.mockResolvedValue({} as any);
+      mockIndex.updateFilterableAttributes.mockResolvedValue({} as any);
+      mockIndex.updateRankingRules.mockResolvedValue({} as any);
+      mockIndex.updateSynonyms.mockResolvedValue({} as any);
+      mockIndex.updateTypoTolerance.mockResolvedValue({} as any);
+
+      // Act
+      await service.onModuleInit();
+
+      // Assert
+      expect(mockIndex.updateSearchableAttributes).toHaveBeenCalledWith([
+        'title',
+        'author',
+        'subject',
+        'keywords',
+        'content'
+      ]);
+      expect(mockIndex.updateSortableAttributes).toHaveBeenCalledWith([
+        'addedAt',
+        'title',
+        'author',
+        'fileSize',
+        'totalPages'
+      ]);
+      expect(mockIndex.updateFilterableAttributes).toHaveBeenCalledWith([
+        'bookId',
+        'author',
+        'subject',
+        'fileSize',
+        'totalPages',
+        'addedAt'
+      ]);
+    });
+
+    it('should handle initialization errors gracefully', async () => {
+      // Arrange
+      const error = new Error('Initialization failed');
+      mockClient.index.mockImplementation(() => {
+        throw error;
+      });
+
+      // Act
+      await service.onModuleInit();
+
+      // Assert
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Failed to initialize Meilisearch service',
+        error
+      );
+    });
+  });
+
+  describe('isHealthy', () => {
+    it('should return true when client is healthy', async () => {
+      // Arrange
+      mockClient.health.mockResolvedValue({} as any);
+
+      // Act
+      const result = await service.isHealthy();
+
+      // Assert
+      expect(result).toBe(true);
+      expect(mockClient.health).toHaveBeenCalled();
+    });
+
+    it('should return false when client health check fails', async () => {
+      // Arrange
+      mockClient.health.mockRejectedValue(new Error('Health check failed'));
+
+      // Act
+      const result = await service.isHealthy();
+
+      // Assert
+      expect(result).toBe(false);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith(
+        'Meilisearch health check failed',
+        expect.any(Error)
+      );
+    });
+  });
+
+  describe('indexBook', () => {
+    it('should index a book with full text content', async () => {
+      // Arrange
+      const fullTextContent = 'This is the full text content of the book';
+      mockIndex.addDocuments.mockResolvedValue({ taskUid: 123 } as any);
+
+      // Act
+      await service.indexBook(mockBook, fullTextContent);
+
+      // Assert
+      expect(mockIndex.addDocuments).toHaveBeenCalledWith([{
+        id: 'test-book-1',
+        bookId: 'test-book-1',
+        title: 'Test Book',
+        author: 'Test Author',
+        subject: 'Testing',
+        keywords: 'test, book',
+        content: fullTextContent,
+        pageNumber: undefined,
+        filePath: '/test/book.pdf',
+        fileSize: 1024000,
+        totalPages: 100,
+        addedAt: mockBook.addedAt.toISOString(),
+        lastOpened: mockBook.lastOpened?.toISOString(),
+      }]);
+    });
+
+    it('should use searchable text when no full text content provided', async () => {
+      // Arrange
+      mockIndex.addDocuments.mockResolvedValue({ taskUid: 123 } as any);
+
+      // Act
+      await service.indexBook(mockBook);
+
+      // Assert
+      expect(mockIndex.addDocuments).toHaveBeenCalledWith([
+        expect.objectContaining({
+          content: 'This is searchable text content',
+          bookId: 'test-book-1'
+        })
+      ]);
+    });
+
+    it('should handle indexing errors', async () => {
+      // Arrange
+      const error = new Error('Indexing failed');
+      mockIndex.addDocuments.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.indexBook(mockBook)).rejects.toThrow('Indexing failed');
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Failed to index book: Test Book',
+        error
+      );
+    });
+  });
+
+  describe('searchBooks', () => {
+    it('should perform search with correct parameters', async () => {
+      // Arrange
+      const mockSearchResult = {
+        hits: [{
+          id: 'book-1',
+          title: 'Test Book',
+          author: 'Test Author',
+          content: 'Test content',
+          _formatted: { content: 'Test <mark>content</mark>' },
+          _rankingScore: 0.95
+        }],
+        query: 'test',
+        processingTimeMs: 10,
+        limit: 20,
+        offset: 0,
+        estimatedTotalHits: 1
+      };
+      mockIndex.search.mockResolvedValue(mockSearchResult);
+
+      // Act
+      const result = await service.searchBooks('test', {
+        limit: 10,
+        offset: 5,
+        highlightPreTag: '<em>',
+        highlightPostTag: '</em>'
+      });
+
+      // Assert
+      expect(mockIndex.search).toHaveBeenCalledWith('test', {
+        limit: 10,
+        offset: 5,
+        filter: undefined,
+        sort: undefined,
+        attributesToHighlight: ['title', 'author', 'content'],
+        highlightPreTag: '<em>',
+        highlightPostTag: '</em>',
+        attributesToCrop: ['content'],
+        cropLength: 200,
+        showMatchesPosition: false,
+        attributesToRetrieve: ['*'],
+      });
+
+      expect(result.hits).toHaveLength(1);
+      expect(result.hits[0]._score).toBe(0.95);
+      expect(result.hits[0]._snippets).toEqual(['Test <mark>content</mark>']);
+    });
+
+    it('should handle search errors', async () => {
+      // Arrange
+      const error = new Error('Search failed');
+      mockIndex.search.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.searchBooks('test')).rejects.toThrow('Search failed');
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Search failed for query: "test"',
+        error
+      );
+    });
+  });
+
+  describe('getSuggestions', () => {
+    it('should return unique suggestions from search results', async () => {
+      // Arrange
+      const mockSearchResult = {
+        hits: [
+          { title: 'JavaScript Guide', author: 'John Doe' },
+          { title: 'JavaScript Patterns', author: 'Jane Smith' },
+          { title: 'Java Fundamentals', author: 'John Doe' }, // Duplicate author
+        ]
+      };
+      mockIndex.search.mockResolvedValue(mockSearchResult);
+
+      // Act
+      const suggestions = await service.getSuggestions('java', 5);
+
+      // Assert
+      expect(suggestions).toEqual([
+        'JavaScript Guide',
+        'JavaScript Patterns', 
+        'Java Fundamentals',
+        'John Doe',
+        'Jane Smith'
+      ]);
+    });
+
+    it('should handle suggestion errors', async () => {
+      // Arrange
+      mockIndex.search.mockRejectedValue(new Error('Suggestion failed'));
+
+      // Act
+      const suggestions = await service.getSuggestions('java');
+
+      // Assert
+      expect(suggestions).toEqual([]);
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Failed to get suggestions for: "java"',
+        expect.any(Error)
+      );
+    });
+  });
+
+  describe('deleteBook', () => {
+    it('should delete book from index', async () => {
+      // Arrange
+      mockIndex.deleteDocument.mockResolvedValue({ taskUid: 456 } as any);
+
+      // Act
+      await service.deleteBook('book-1');
+
+      // Assert
+      expect(mockIndex.deleteDocument).toHaveBeenCalledWith('book-1');
+    });
+
+    it('should handle deletion errors', async () => {
+      // Arrange
+      const error = new Error('Deletion failed');
+      mockIndex.deleteDocument.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(service.deleteBook('book-1')).rejects.toThrow('Deletion failed');
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Failed to delete book from index: book-1',
+        error
+      );
+    });
+  });
+
+  describe('getIndexStats', () => {
+    it('should return index statistics', async () => {
+      // Arrange
+      const mockStats = {
+        numberOfDocuments: 42,
+        isIndexing: false,
+        fieldDistribution: { title: 42, author: 42, content: 42 }
+      };
+      mockIndex.getStats.mockResolvedValue(mockStats);
+
+      // Act
+      const stats = await service.getIndexStats();
+
+      // Assert
+      expect(stats).toEqual({
+        numberOfDocuments: 42,
+        isIndexing: false,
+        fieldDistribution: { title: 42, author: 42, content: 42 }
+      });
+    });
+
+    it('should handle stats errors', async () => {
+      // Arrange
+      mockIndex.getStats.mockRejectedValue(new Error('Stats failed'));
+
+      // Act
+      const stats = await service.getIndexStats();
+
+      // Assert
+      expect(stats).toBeNull();
+      expect(Logger.prototype.error).toHaveBeenCalledWith(
+        'Failed to get index stats',
+        expect.any(Error)
+      );
+    });
+  });
+
+  describe('indexBooks', () => {
+    it('should batch index multiple books', async () => {
+      // Arrange
+      const mockBook2 = { ...mockBook, id: BookId.fromString('book-2') } as Book;
+      const books = [
+        { book: mockBook, fullTextContent: 'Full text 1' },
+        { book: mockBook2, fullTextContent: 'Full text 2' }
+      ];
+      mockIndex.addDocuments.mockResolvedValue({ taskUid: 789 } as any);
+
+      // Act
+      await service.indexBooks(books);
+
+      // Assert
+      expect(mockIndex.addDocuments).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: 'test-book-1',
+          content: 'Full text 1'
+        }),
+        expect.objectContaining({
+          id: 'book-2',
+          content: 'Full text 2'
+        })
+      ]);
+    });
+  });
+});

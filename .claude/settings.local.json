@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(npm test)",
+      "Bash(npx playwright test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout 10s npm run reindex-books)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:mozilla.github.io)",
+      "Bash(grep:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(npm start)",
+      "Bash(sqlite3:*)",
+      "Bash(npm run lint)",
+      "Bash(npx tsc:*)",
+      "Bash(openssl rand:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx ng build:*)",
+      "Bash(npm run start:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,32 @@
+<div class="side-panel-container">
+  <!-- Tab Headers -->
+  <div class="tab-header">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'library'"
+      (click)="setActiveTab('library')">
+      📚 Library
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'toc'"
+      (click)="setActiveTab('toc')"
+      [disabled]="!currentBook">
+      📑 Table of Contents
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <div *ngIf="activeTab === 'library'" class="tab-pane active">
+      <app-book-list></app-book-list>
+    </div>
+    
+    <div *ngIf="activeTab === 'toc'" class="tab-pane active">
+      <app-toc *ngIf="currentBook" [bookId]="currentBook.id"></app-toc>
+      <div *ngIf="!currentBook" class="no-book-toc">
+        <p>Select a book to view its table of contents</p>
+      </div>
+    </div>
+  </div>
+</div>

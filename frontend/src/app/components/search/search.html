@@ -1,0 +1,71 @@
+<div class="search-container">
+  <!-- Search Toggle Button -->
+  <button 
+    class="search-toggle-btn" 
+    (click)="toggleSearch()"
+    [class.active]="isSearchVisible"
+    title="Search books (Ctrl+K)">
+    🔍
+  </button>
+
+  <!-- Search Overlay -->
+  <div class="search-overlay" *ngIf="isSearchVisible" (click)="clearSearch()">
+    <div class="search-modal" (click)="$event.stopPropagation()">
+      <!-- Search Input -->
+      <div class="search-input-container">
+        <input 
+          type="text" 
+          class="search-input global-search-input"
+          [(ngModel)]="searchQuery"
+          (input)="onSearchInput()"
+          placeholder="Search across all books..."
+          autocomplete="off">
+        <button class="search-close-btn" (click)="clearSearch()">✕</button>
+      </div>
+
+      <!-- Loading indicator -->
+      <div *ngIf="isSearching" class="search-loading">
+        Searching...
+      </div>
+
+      <!-- Search Results -->
+      <div class="search-results" *ngIf="!isSearching && searchResults.length > 0">
+        <div class="search-results-header">
+          Found {{ searchResults.length }} result{{ searchResults.length !== 1 ? 's' : '' }}
+        </div>
+        
+        <div class="search-result-item" 
+             *ngFor="let result of searchResults" 
+             (click)="selectBook(result)">
+          <div class="book-info">
+            <h4 class="book-title">{{ result.book.title }}</h4>
+            <p class="book-author">by {{ result.book.author }}</p>
+            <div class="result-metadata">
+              <span class="relevance-score">Relevance: {{ result.relevanceScore }}</span>
+              <span *ngIf="result.pageNumber" class="page-number">Page {{ result.pageNumber }}</span>
+            </div>
+          </div>
+          
+          <div class="search-snippets" *ngIf="result.snippets.length > 0">
+            <div class="snippet" 
+                 *ngFor="let snippet of result.snippets"
+                 [innerHTML]="highlightSearchTerm(snippet, searchQuery)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Results -->
+      <div class="no-results" *ngIf="!isSearching && searchQuery.length >= 2 && searchResults.length === 0">
+        <p>No books found matching "{{ searchQuery }}"</p>
+        <small>Try different keywords or check your spelling</small>
+      </div>
+
+      <!-- Search Help -->
+      <div class="search-help" *ngIf="!isSearching && searchQuery.length < 2">
+        <p>Start typing to search across all your books...</p>
+        <small>Search looks through book content, titles, authors, and metadata</small>
+      </div>
+    </div>
+  </div>
+</div>

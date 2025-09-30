@@ -1,0 +1,41 @@
+<div class="book-list">
+  <!-- NEW: Recent Books Section -->
+  <app-recent-books></app-recent-books>
+
+  <h3>Library</h3>
+
+  <div class="books-container">
+    <div *ngFor="let book of books$ | async"
+         class="book-item"
+         [class.active]="isCurrentBook(book)">
+
+      <div class="book-cover">
+        <img
+          [src]="getCoverUrl(book.id)"
+          [alt]="book.title"
+          (error)="onCoverError($event)"
+          loading="lazy"
+        />
+      </div>
+
+      <div class="book-info" (click)="selectBook(book)">
+        <h4 class="book-title">{{ book.title }}</h4>
+        <p class="book-author">{{ book.author }}</p>
+        <div class="book-meta">
+          <span class="pages">{{ book.totalPages }} pages</span>
+          <span class="file-size">{{ (book.fileSize / 1024 / 1024).toFixed(1) }} MB</span>
+        </div>
+      </div>
+
+      <div class="book-actions">
+        <button class="btn-icon" (click)="selectBook(book)" title="Open Book">📖</button>
+        <button class="btn-icon delete-btn" (click)="deleteBook(book, $event)" title="Delete Book">🗑️</button>
+      </div>
+    </div>
+
+    <div *ngIf="(books$ | async)?.length === 0" class="empty-state">
+      <p>No books in your library yet.</p>
+      <p>Use "Open PDF" to add your first book!</p>
+    </div>
+  </div>
+</div>

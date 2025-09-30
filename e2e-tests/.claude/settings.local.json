@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright test:*)",
+      "Read(D:\\software_dev\\random\\ebook-reader/**)",
+      "Bash(npm run dev:both:*)",
+      "Read(D:\\software_dev\\random\\ebook-reader/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

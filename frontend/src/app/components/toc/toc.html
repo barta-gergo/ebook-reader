@@ -1,0 +1,57 @@
+<div class="toc-container">
+  <div class="toc-header">
+    <h3>Table of Contents</h3>
+    
+    <!-- Search input -->
+    <div class="toc-search">
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput()"
+        placeholder="Search TOC..."
+        class="toc-search-input"
+      >
+      <button 
+        *ngIf="searchQuery" 
+        (click)="clearSearch()" 
+        class="clear-search-btn"
+        title="Clear search"
+      >
+        ×
+      </button>
+    </div>
+  </div>
+
+  <div class="toc-content">
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="toc-loading">
+      <div class="loading-spinner"></div>
+      <span>Loading table of contents...</span>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!isLoading && filteredTocItems.length === 0 && !searchQuery" class="toc-empty">
+      <p>No table of contents available for this book.</p>
+    </div>
+
+    <!-- No search results -->
+    <div *ngIf="!isLoading && filteredTocItems.length === 0 && searchQuery" class="toc-no-results">
+      <p>No items found for "{{ searchQuery }}"</p>
+    </div>
+
+    <!-- TOC tree -->
+    <div *ngIf="!isLoading && filteredTocItems.length > 0" class="toc-tree">
+      <ng-container *ngFor="let item of filteredTocItems; trackBy: trackByItemId">
+        <app-toc-item 
+          [item]="item" 
+          [currentPage]="currentPage"
+          [expandedItems]="expandedItems"
+          [searchQuery]="searchQuery"
+          (navigate)="navigateToPage($event)"
+          (toggle)="toggleExpanded($event)"
+        ></app-toc-item>
+      </ng-container>
+    </div>
+  </div>
+</div>
+

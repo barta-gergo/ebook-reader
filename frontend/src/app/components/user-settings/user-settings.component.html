@@ -1,0 +1,243 @@
+<div class="settings-overlay" *ngIf="showSettings" (click)="closeSettings()">
+  <div class="settings-modal" (click)="$event.stopPropagation()">
+    <div class="settings-header">
+      <h2>User Settings</h2>
+      <button class="close-button" (click)="closeSettings()" aria-label="Close settings">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="settings-content" *ngIf="!isLoading">
+      <form (ngSubmit)="saveSettings()" #settingsForm="ngForm">
+        
+        <!-- Profile Settings -->
+        <section class="settings-section">
+          <h3>Profile</h3>
+          <div class="form-group">
+            <label for="displayName">Display Name</label>
+            <input 
+              type="text" 
+              id="displayName" 
+              name="displayName"
+              [(ngModel)]="displayName" 
+              placeholder="Enter your display name"
+              class="form-control"
+            />
+            <small class="form-help">This name will be shown in your profile</small>
+          </div>
+        </section>
+
+        <!-- Appearance Settings -->
+        <section class="settings-section">
+          <h3>Appearance</h3>
+          <div class="form-group">
+            <label for="theme">Theme</label>
+            <select id="theme" name="theme" [(ngModel)]="theme" class="form-control">
+              <option value="system">System Default</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="language">Language</label>
+            <select id="language" name="language" [(ngModel)]="language" class="form-control">
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Reading Preferences -->
+        <section class="settings-section">
+          <h3>Reading Preferences</h3>
+          
+          <div class="form-group">
+            <label for="fontSize">Font Size</label>
+            <select id="fontSize" name="fontSize" [(ngModel)]="fontSize" class="form-control">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="lineHeight">Line Height: {{ lineHeight }}</label>
+            <input 
+              type="range" 
+              id="lineHeight" 
+              name="lineHeight"
+              min="1.0" 
+              max="2.0" 
+              step="0.1"
+              [value]="lineHeight"
+              (input)="onLineHeightChange($event)"
+              class="form-range"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="defaultZoom">Default Zoom: {{ (defaultZoom * 100) | number:'1.0-0' }}%</label>
+            <input 
+              type="range" 
+              id="defaultZoom" 
+              name="defaultZoom"
+              min="0.5" 
+              max="3.0" 
+              step="0.1"
+              [value]="defaultZoom"
+              (input)="onZoomChange($event)"
+              class="form-range"
+            />
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="defaultFitToPage"
+                [(ngModel)]="defaultFitToPage"
+              />
+              <span class="checkmark"></span>
+              Fit to page by default
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="pageTransition">Page Transition</label>
+            <select id="pageTransition" name="pageTransition" [(ngModel)]="pageTransition" class="form-control">
+              <option value="instant">Instant</option>
+              <option value="fade">Fade</option>
+              <option value="slide">Slide</option>
+            </select>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="autoBookmark"
+                [(ngModel)]="autoBookmark"
+              />
+              <span class="checkmark"></span>
+              Auto-bookmark when closing books
+            </label>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="rememberLastPage"
+                [(ngModel)]="rememberLastPage"
+              />
+              <span class="checkmark"></span>
+              Remember last page position
+            </label>
+          </div>
+        </section>
+
+        <!-- Notifications -->
+        <section class="settings-section">
+          <h3>Notifications</h3>
+          
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="notificationsEnabled"
+                [(ngModel)]="notificationsEnabled"
+              />
+              <span class="checkmark"></span>
+              Enable notifications
+            </label>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="emailUpdates"
+                [(ngModel)]="emailUpdates"
+              />
+              <span class="checkmark"></span>
+              Receive email updates
+            </label>
+          </div>
+        </section>
+
+        <!-- Privacy Settings -->
+        <section class="settings-section">
+          <h3>Privacy</h3>
+          
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="profileVisible"
+                [(ngModel)]="profileVisible"
+              />
+              <span class="checkmark"></span>
+              Make profile visible to others
+            </label>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input 
+                type="checkbox" 
+                name="readingStatsVisible"
+                [(ngModel)]="readingStatsVisible"
+              />
+              <span class="checkmark"></span>
+              Show reading statistics
+            </label>
+          </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <div class="settings-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="resetToDefaults()"
+            [disabled]="saveStatus === 'saving'"
+          >
+            Reset to Defaults
+          </button>
+          
+          <div class="primary-actions">
+            <button 
+              type="button" 
+              class="btn btn-outline" 
+              (click)="closeSettings()"
+              [disabled]="saveStatus === 'saving'"
+            >
+              Cancel
+            </button>
+            
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              [disabled]="saveStatus === 'saving'"
+            >
+              <span *ngIf="saveStatus === 'saving'">Saving...</span>
+              <span *ngIf="saveStatus === 'saved'">✓ Saved</span>
+              <span *ngIf="saveStatus === 'error'">✗ Error</span>
+              <span *ngIf="saveStatus === 'idle'">Save Settings</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-loading" *ngIf="isLoading">
+      <div class="loading-spinner"></div>
+      <p>Loading your settings...</p>
+    </div>
+  </div>
+</div>

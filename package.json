@@ -1,0 +1,41 @@
+{
+  "name": "ebook-reader",
+  "version": "1.0.0",
+  "description": "Modern ebook reader Progressive Web App built with Angular and NestJS, following Domain-Driven Design (DDD) principles.",
+  "main": "extract_pdf_metadata.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:codegen": "playwright codegen http://localhost:4200",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev:both": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "ebook",
+    "pdf",
+    "reader",
+    "angular",
+    "nestjs",
+    "typescript",
+    "e2e",
+    "testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "@types/node": "^24.5.2",
+    "@types/pdfkit": "^0.17.3",
+    "concurrently": "^8.2.2",
+    "pdfkit": "^0.17.2",
+    "playwright": "^1.55.1",
+    "typescript": "^5.9.2"
+  }
+}
